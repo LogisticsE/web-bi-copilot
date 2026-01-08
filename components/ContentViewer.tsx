@@ -125,13 +125,21 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
 
   // Embed the report when embedInfo is available
   useEffect(() => {
-    if (!embedInfo || !embedContainerRef.current || loading) {
+    // Don't run if embedInfo is not available yet
+    if (!embedInfo) {
       return;
     }
 
-    // Set loading state
-    setLoading(true);
-    setError(null);
+    // Wait a tick for container to be mounted
+    const timer = setTimeout(() => {
+      if (!embedContainerRef.current) {
+        console.warn('Container not available after delay');
+        return;
+      }
+
+      // Set loading state
+      setLoading(true);
+      setError(null);
 
     // Dynamically import powerbi-client only on client side
     const embedReport = async () => {
@@ -139,6 +147,11 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
         // Only import on client side
         if (typeof window === 'undefined') {
           throw new Error('Power BI embedding is only available in the browser');
+        }
+
+        // Double-check container is still available
+        if (!embedContainerRef.current) {
+          throw new Error('Container not available');
         }
 
         // Dynamic import to avoid SSR issues
@@ -155,7 +168,17 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
 
         // Clear previous embed
         if (embedContainerRef.current && powerbiRef.current) {
-          powerbiRef.current.reset(embedContainerRef.current);
+          try {
+            powerbiRef.current.reset(embedContainerRef.current);
+          } catch (e) {
+            // Ignore reset errors (container might be empty)
+            console.log('Reset container:', e);
+          }
+        }
+
+        // Verify container is still available after async operations
+        if (!embedContainerRef.current) {
+          throw new Error('Container became unavailable');
         }
 
         // Configure embed settings
@@ -175,8 +198,8 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
         };
 
         // Embed the report
-        if (!embedContainerRef.current || !powerbiRef.current) {
-          throw new Error('Container or Power BI service not available');
+        if (!powerbiRef.current) {
+          throw new Error('Power BI service not available');
         }
 
         const report = powerbiRef.current.embed(embedContainerRef.current, embedConfiguration);
@@ -194,6 +217,12 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
           setLoading(false);
         });
 
+        // Also handle rendered event
+        report.on('rendered', () => {
+          console.log('Power BI report rendered');
+          setLoading(false);
+        });
+
       } catch (err) {
         console.error('Error embedding Power BI report:', err);
         setError('Failed to embed Power BI report: ' + (err instanceof Error ? err.message : 'Unknown error'));
@@ -201,9 +230,21 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
       }
     };
 
-    embedReport();
+      embedReport();
+    }, 50); // Small delay to ensure container is mounted
 
-  }, [embedInfo, loading]);
+    // Cleanup function
+    return () => {
+      clearTimeout(timer);
+      if (embedContainerRef.current && powerbiRef.current) {
+        try {
+          powerbiRef.current.reset(embedContainerRef.current);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+    };
+  }, [embedInfo]);
 
   return (
     <div className={styles.container}>
@@ -229,16 +270,30 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
       </div>
       
       <div className={styles.content}>
-        {loading ? (
-          <div className={styles.loadingState}>
+        {/* Always render container so ref is available */}
+        <div className={styles.iframeWrapper}>
+          <div 
+            ref={embedContainerRef}
+            id={`powerbi-container-${item.id}`} 
+            className={styles.powerbiContainer}
+            style={{ width: '100%', height: '100%', minHeight: '600px' }}
+          />
+        </div>
+        
+        {/* Show loading overlay */}
+        {loading && (
+          <div className={styles.loadingState} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10, 14, 26, 0.8)', zIndex: 10 }}>
             <div className={styles.loadingSpinner}>
               <div className={styles.spinnerRing}></div>
               <div className={styles.spinnerRing}></div>
             </div>
             <p>Loading Power BI Report...</p>
           </div>
-        ) : error ? (
-          <div className={styles.errorState}>
+        )}
+        
+        {/* Show error overlay */}
+        {error && !loading && (
+          <div className={styles.errorState} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10, 14, 26, 0.9)', zIndex: 10 }}>
             <div className={styles.errorIcon}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10"/>
@@ -251,15 +306,6 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
             <button className={styles.retryBtn} onClick={loadEmbedInfo}>
               Try Again
             </button>
-          </div>
-        ) : (
-          <div className={styles.iframeWrapper}>
-            <div 
-              ref={embedContainerRef}
-              id={`powerbi-container-${item.id}`} 
-              className={styles.powerbiContainer}
-              style={{ width: '100%', height: '100%', minHeight: '600px' }}
-            />
           </div>
         )}
       </div>
