@@ -166,7 +166,7 @@ export default function Home() {
         </form>
       </div>
 
-      <p className={styles.copyright}>© 2024 Logistics Enterprise Portal. All rights reserved.</p>
+      <p className={styles.copyright}>© 2026 Logistics Enterprise Portal. All rights reserved.</p>
     </div>
   );
 }
