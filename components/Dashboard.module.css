@@ -1,0 +1,172 @@
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+}
+
+.mainContent {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left var(--transition-base);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.mainContent.expanded {
+  margin-left: var(--sidebar-collapsed);
+}
+
+/* Welcome Screen */
+.welcomeScreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-2xl);
+}
+
+.welcomeContent {
+  text-align: center;
+  max-width: 600px;
+}
+
+.welcomeIcon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-xl);
+  color: var(--color-accent-primary);
+  animation: slideInUp 0.5s ease-out;
+}
+
+.welcomeTitle {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+  animation: slideInUp 0.5s ease-out 0.1s both;
+}
+
+.userName {
+  color: var(--color-accent-primary);
+}
+
+.welcomeSubtitle {
+  color: var(--color-text-secondary);
+  font-size: 1.125rem;
+  margin-bottom: var(--space-2xl);
+  animation: slideInUp 0.5s ease-out 0.2s both;
+}
+
+/* Quick Actions */
+.quickActions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-2xl);
+  animation: slideInUp 0.5s ease-out 0.3s both;
+}
+
+.quickAction {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: linear-gradient(135deg, var(--color-accent-primary), #e55a3a);
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+}
+
+.quickAction:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.quickAction svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Info Cards */
+.infoCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-lg);
+  animation: slideInUp 0.5s ease-out 0.4s both;
+}
+
+.infoCard {
+  padding: var(--space-xl);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.infoCard:hover {
+  border-color: var(--color-border-active);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.infoIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-accent-glow), transparent);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+  color: var(--color-accent-primary);
+}
+
+.infoIcon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.infoCard h3 {
+  font-size: 1.125rem;
+  margin-bottom: var(--space-sm);
+}
+
+.infoCard p {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .mainContent {
+    margin-left: var(--sidebar-collapsed);
+  }
+  
+  .mainContent.expanded {
+    margin-left: var(--sidebar-collapsed);
+  }
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+  }
+  
+  .welcomeScreen {
+    padding: var(--space-lg);
+  }
+  
+  .welcomeTitle {
+    font-size: 1.5rem;
+  }
+  
+  .welcomeSubtitle {
+    font-size: 1rem;
+  }
+  
+  .infoCards {
+    grid-template-columns: 1fr;
+  }
+}
