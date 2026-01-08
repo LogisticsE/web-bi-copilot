@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import styles from './ContentViewer.module.css';
 import { MenuItem, CopilotConfig, PowerBIConfig, PowerBIEmbedInfo } from '@/lib/types';
-import * as powerbi from 'powerbi-client';
 
 interface ContentViewerProps {
   item: MenuItem;
@@ -53,7 +52,7 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const embedContainerRef = useRef<HTMLDivElement>(null);
-  const powerbiRef = useRef<powerbi.service.Service | null>(null);
+  const powerbiRef = useRef<any>(null);
 
   useEffect(() => {
     loadEmbedInfo();
@@ -134,62 +133,75 @@ function PowerBIViewer({ item, config }: { item: MenuItem; config: PowerBIConfig
     setLoading(true);
     setError(null);
 
-    try {
-      // Initialize Power BI service (library is imported as module)
-      if (!powerbiRef.current) {
-        powerbiRef.current = new powerbi.service.Service(
-          powerbi.factories.hpmFactory,
-          powerbi.factories.wpmpFactory,
-          powerbi.factories.routerFactory
-        );
-      }
+    // Dynamically import powerbi-client only on client side
+    const embedReport = async () => {
+      try {
+        // Only import on client side
+        if (typeof window === 'undefined') {
+          throw new Error('Power BI embedding is only available in the browser');
+        }
 
-      // Clear previous embed
-      if (embedContainerRef.current && powerbiRef.current) {
-        powerbiRef.current.reset(embedContainerRef.current);
-      }
+        // Dynamic import to avoid SSR issues
+        const powerbi = await import('powerbi-client');
 
-      // Configure embed settings
-      const embedConfiguration: powerbi.IEmbedConfiguration = {
-        type: 'report',
-        id: embedInfo.reportId,
-        embedUrl: embedInfo.embedUrl,
-        accessToken: embedInfo.embedToken,
-        tokenType: powerbi.models.TokenType.Embed,
-        settings: {
-          panes: {
-            filters: { expanded: false, visible: true },
-            pageNavigation: { visible: true },
+        // Initialize Power BI service
+        if (!powerbiRef.current) {
+          powerbiRef.current = new powerbi.service.Service(
+            powerbi.factories.hpmFactory,
+            powerbi.factories.wpmpFactory,
+            powerbi.factories.routerFactory
+          );
+        }
+
+        // Clear previous embed
+        if (embedContainerRef.current && powerbiRef.current) {
+          powerbiRef.current.reset(embedContainerRef.current);
+        }
+
+        // Configure embed settings
+        const embedConfiguration = {
+          type: 'report' as const,
+          id: embedInfo.reportId,
+          embedUrl: embedInfo.embedUrl,
+          accessToken: embedInfo.embedToken,
+          tokenType: powerbi.models.TokenType.Embed,
+          settings: {
+            panes: {
+              filters: { expanded: false, visible: true },
+              pageNavigation: { visible: true },
+            },
+            background: powerbi.models.BackgroundType.Transparent,
           },
-          background: powerbi.models.BackgroundType.Transparent,
-        },
-      };
+        };
 
-      // Embed the report
-      if (!embedContainerRef.current || !powerbiRef.current) {
-        throw new Error('Container or Power BI service not available');
+        // Embed the report
+        if (!embedContainerRef.current || !powerbiRef.current) {
+          throw new Error('Container or Power BI service not available');
+        }
+
+        const report = powerbiRef.current.embed(embedContainerRef.current, embedConfiguration);
+
+        // Handle embed events
+        report.on('loaded', () => {
+          console.log('Power BI report loaded successfully');
+          setError(null);
+          setLoading(false);
+        });
+
+        report.on('error', (event: any) => {
+          console.error('Power BI embed error:', event);
+          setError('Failed to embed Power BI report. Please check your configuration.');
+          setLoading(false);
+        });
+
+      } catch (err) {
+        console.error('Error embedding Power BI report:', err);
+        setError('Failed to embed Power BI report: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        setLoading(false);
       }
+    };
 
-      const report = powerbiRef.current.embed(embedContainerRef.current, embedConfiguration);
-
-      // Handle embed events
-      report.on('loaded', () => {
-        console.log('Power BI report loaded successfully');
-        setError(null);
-        setLoading(false);
-      });
-
-      report.on('error', (event: any) => {
-        console.error('Power BI embed error:', event);
-        setError('Failed to embed Power BI report. Please check your configuration.');
-        setLoading(false);
-      });
-
-    } catch (err) {
-      console.error('Error embedding Power BI report:', err);
-      setError('Failed to embed Power BI report: ' + (err instanceof Error ? err.message : 'Unknown error'));
-      setLoading(false);
-    }
+    embedReport();
 
   }, [embedInfo, loading]);
 
